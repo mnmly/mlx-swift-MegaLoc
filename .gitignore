@@ -1,0 +1,24 @@
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Xcode / derived data
+.xcdd/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+DerivedData/
+
+# DocC static site output
+/docs/
+
+# macOS
+.DS_Store
+
+# Coverage / profiling artifacts
+*.profraw
+*.profdata
+
+# Large model weights (loaded from ~/.cache/huggingface, never committed)
+*.safetensors
+!Tests/**/Fixtures/*.safetensors
