@@ -121,4 +121,34 @@ final class ParityTests: XCTestCase {
         runStages(fx, model, patchTol: 2.0, saladTol: 2e-3, finalTol: 3e-3,
                   cosTol: 0.9998, label: "GPU")
     }
+
+    /// Non-square input (322×406, the shape upstream's CI uses). This is the only
+    /// parity case that exercises ``DINOv2Backbone`` positional-encoding
+    /// interpolation *asymmetrically*: at 518×518 the pretrained 37×37 grid is
+    /// returned verbatim, and any square size resamples to a square grid, so a
+    /// transposed patch grid stays invisible. Here rows≠cols (23×29), so getting
+    /// the axis order wrong shifts every patch token's positional encoding.
+    func testParityNonSquare_GPU() throws {
+        let fx = try MLX.loadArrays(url: try fixtureURL("parity_322x406"))
+        let model = try MegaLoc.load(weights: try weightsURL(), dtype: .float32)
+        XCTAssertEqual(fx["patch_features_nchw"]!.shape, [1, 768, 23, 29])
+        runStages(fx, model, patchTol: 2.0, saladTol: 2e-3, finalTol: 3e-3,
+                  cosTol: 0.9998, label: "GPU 322x406")
+    }
+
+    /// CPU counterpart of ``testParityNonSquare_GPU()`` — the strict proof that
+    /// the interpolated positional grid matches the reference elementwise.
+    /// Opt-in — see ``cpuParityEnabled``.
+    func testParityNonSquare_CPU() throws {
+        try XCTSkipUnless(
+            Self.cpuParityEnabled,
+            "CPU parity proof is opt-in (slow). Enable with `touch ~/.megaloc-run-cpu-parity`"
+            + " or MEGALOC_CPU_PARITY=1.")
+        let fx = try MLX.loadArrays(url: try fixtureURL("parity_322x406"))
+        let model = try MegaLoc.load(weights: try weightsURL(), dtype: .float32)
+        Device.withDefaultDevice(Device(.cpu)) {
+            runStages(fx, model, patchTol: 3e-3, saladTol: 5e-5, finalTol: 5e-5,
+                      cosTol: 0.999999, label: "CPU 322x406")
+        }
+    }
 }

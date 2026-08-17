@@ -30,6 +30,10 @@ fixtures (see `Tools/generate_fixtures.py`, `Tests/MLXMegaLocTests`):
 | final descriptor | **2.1e-7** | 6.8e-4 |
 | **descriptor cosine** | **1.000000** | **0.999885** |
 
+Numbers above are the 518×518 fixture. A second fixture at **322×406** covers
+non-square inputs, where the backbone resamples the pretrained 37×37 positional
+grid to a 23×29 one (CPU: descriptor max abs **2.6e-7**, cosine **1.000000**).
+
 On the CPU device MLX reproduces PyTorch to ~1e-7 — a strict correctness proof.
 On the Metal GPU the only difference is fp32 matmul accumulation order, which
 leaves the retrieval descriptor cosine at ≈ 0.9999 (indistinguishable for

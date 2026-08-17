@@ -180,7 +180,14 @@ public final class DINOv2Backbone: Module {
 
     /// Interpolate positional encoding for input patch grids that differ from
     /// the pretrained `imageSize`. Mirrors `DINOv2.interpolate_pos_encoding`
-    /// in megaloc_model.py, including its `(w0, h0)` output ordering.
+    /// in megaloc_model.py.
+    ///
+    /// The reference's parameter names are misleading: `forward` calls it as
+    /// `interpolate_pos_encoding(x, H, W)`, so its `w`/`w0` carry the *height*
+    /// and its `sx` scales the row axis. The interpolated grid is therefore
+    /// `(H/p, W/p)` — row-major over patch rows, matching `patch_embed`'s token
+    /// order. (Upstream fixed the swapped call in gmberton/MegaLoc@4a23a2b;
+    /// before that fix the grid came out transposed for non-square inputs.)
     private func interpolatePosEncoding(numTokens: Int, height: Int, width: Int) -> MLXArray {
         let n = posEmbed.dim(1) - 1
         if numTokens - 1 == n && width == height {
@@ -190,15 +197,14 @@ public final class DINOv2Backbone: Module {
         let classPos = posEmbed[0..., ..<1]            // [1, 1, dim]
         let patchPos = posEmbed[0..., 1...]            // [1, N, dim]
 
-        let w0 = width / config.patchSize
-        let h0 = height / config.patchSize
+        let rows = height / config.patchSize           // python w0 (receives H)
+        let cols = width / config.patchSize            // python h0 (receives W)
         let m = Int(Float(n).squareRoot())
 
         var grid = patchPos.reshaped([1, m, m, dim])   // NHWC, axis1=H rows, axis2=W cols
-        // Python: F.interpolate(scale_factor=(sx=(w0+off)/M, sy=(h0+off)/M)) on the
-        // [1, dim, M, M] tensor, so the H(rows) axis maps to w0 and W(cols) to h0.
-        grid = pytorchBicubicResample(grid, outH: w0, outW: h0, offset: config.interpolateOffset)
-        let flat = grid.reshaped([1, w0 * h0, dim])
+        grid = pytorchBicubicResample(
+            grid, outH: rows, outW: cols, offset: config.interpolateOffset)
+        let flat = grid.reshaped([1, rows * cols, dim])
         return concatenated([classPos, flat], axis: 1)
     }
 
