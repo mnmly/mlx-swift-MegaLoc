@@ -13,7 +13,7 @@ let package = Package(
         .executable(name: "megaloc-cli", targets: ["megaloc-cli"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/ml-explore/mlx-swift", .upToNextMinor(from: "0.31.3")),
+        .package(url: "https://github.com/ml-explore/mlx-swift", "0.31.3" ..< "0.33.0"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.5.0"),
     ],
     targets: [
